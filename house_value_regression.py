@@ -13,8 +13,8 @@ from torch.utils.data import DataLoader, TensorDataset
 
 class Regressor:
 
-    def __init__(self, x, nb_epoch=500, lr=1e-3, batch_size=32, activation='relu', output_activation='relu', layers=4,
-                 neurons=64):
+    def __init__(self, x, nb_epoch=500, learning_rate=1e-2, batch_size=32, activation='relu', output_activation='relu', layers=3,
+                 neurons=32):
         """
         Initialise the model.
 
@@ -26,14 +26,13 @@ class Regressor:
 
         """
         self.nb_epoch = nb_epoch
-        self.num_vars = ['longitude', 'latitude', 'housing_median_age', 'total_rooms', 'total_bedrooms', 'population',
-                         'households', 'median_income']
-        self.cat_var = ['ocean_proximity']
-        self.target_var = ['median_house_value']
+        self.num_vars = []
+        self.cat_vars = []
+        self.target_var = []
         self.encoder = None
         self.y_scaler = None
         self.scaler = None
-        self.learning_rate = lr
+        self.learning_rate = learning_rate
         self.batch_size = batch_size
 
         self.error_fn = None
@@ -48,6 +47,7 @@ class Regressor:
         self.neurons = neurons
         self.losses = []
         self.x = x
+        self.get_vars()
         X, _ = self._preprocessor(x=self.x, training=True)
         self.input_size = X.shape[1]
         return
@@ -75,7 +75,7 @@ class Regressor:
             # define the input layer
             self.input_layer = nn.Linear(in_features=self.input_size, out_features=self.neurons)
             if self.layers > 0:
-                inner_layers = [nn.Linear(in_features=self.neurons, out_features=self.neurons) for k in
+                inner_layers = [nn.Linear(in_features=self.neurons, out_features=self.neurons) for _ in
                                 range(self.layers)]
                 self.inner_layers = nn.ModuleList(inner_layers)
             else:
@@ -97,7 +97,6 @@ class Regressor:
             self.nn_model = self.apply_layers()
 
         def apply_layers(self):
-            # input is reshaped to the 1D array and fed into the input layer
             # input = input.reshape((input.size(0), self.input_size, 1))
 
             # Activation function is applied to the input layer
@@ -119,20 +118,19 @@ class Regressor:
             return self.nn_model(input)
 
     def get_params(self, deep=True):
-        params = {'x': self.x, 'nb_epoch': self.nb_epoch, 'lr': self.learning_rate, 'layers': self.layers,
-                  'batch_size': self.batch_size, 'neurons': self.neurons,
-                  'activation': self.activation, 'output_activation': self.output_activation}
+        params = dict(x=self.x, nb_epoch=self.nb_epoch, learning_rate=self.learning_rate, layers=self.layers,
+                      batch_size=self.batch_size, neurons=self.neurons, activation=self.activation,
+                      output_activation=self.output_activation)
         return params
 
     def set_params(self, **parameters):
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
 
-        ##### Reset the model #####
-        self.num_vars = ['longitude', 'latitude', 'housing_median_age', 'total_rooms', 'total_bedrooms', 'population',
-                         'households', 'median_income']
-        self.cat_var = ['ocean_proximity']
-        self.target_var = ['median_house_value']
+        # Reset the model
+        self.num_vars = []
+        self.cat_vars = []
+        self.target_var = []
         self.encoder = None
         self.y_scaler = None
         self.scaler = None
@@ -144,6 +142,7 @@ class Regressor:
         self.output_size = 1
         self.errors = []
         self.losses = []
+        self.get_vars()
         X, _ = self._preprocessor(x=self.x, training=True)
         self.input_size = X.shape[1]
         return self
@@ -166,7 +165,11 @@ class Regressor:
               size (batch_size, 1).
 
         """
-        # First we replace NAs and Infs
+        # Update variable names if training
+        if training and y is not None:
+            self.get_target(y)
+
+        # Replace NAs and Infs
         x1 = x.copy(deep=True)
         x1 = self.replace_nas(x1)
         x1 = self.replace_infs(x1)
@@ -183,6 +186,28 @@ class Regressor:
             y = self.scale_y(y)
 
         return processed_x, (y if isinstance(y, torch.Tensor) else None)
+
+    def get_vars(self):
+        """This gleans the variable names from the provided dataset and categorises variables as either numerical or
+        categorical """
+        self.num_vars = []
+        self.cat_vars = []
+        for column in self.x:
+            if self.x[column].dtype == object:
+                self.cat_vars.append(column)
+            else:
+                self.num_vars.append(column)
+
+        self.num_vars = list(set(self.num_vars))
+        self.cat_vars = list(set(self.cat_vars))
+
+    def get_target(self, y):
+        """This gleans the target variable's name from the provided dataset """
+        if isinstance(y, pd.DataFrame):
+            self.target_var = y.columns[0]
+        else:
+            target_name = input('Please enter a name for the target variable:')
+            self.target_var = target_name
 
     @staticmethod
     def replace_nas(df):
@@ -221,9 +246,9 @@ class Regressor:
         if training:
             # Initialise encoder
             self.encoder = OneHotEncoder()
-            encoded_array = self.encoder.fit_transform(df[self.cat_var]).toarray()
+            encoded_array = self.encoder.fit_transform(df[self.cat_vars]).toarray()
         else:
-            encoded_array = self.encoder.transform(df[self.cat_var]).toarray()
+            encoded_array = self.encoder.transform(df[self.cat_vars]).toarray()
 
         feature_labels = self.encoder.categories_
         feature_labels = np.array(feature_labels).ravel()
@@ -242,7 +267,8 @@ class Regressor:
 
         return scaled_num_data
 
-    def scale_y(self, y):
+    @staticmethod
+    def scale_y(y):
         """converts a pd dataframe to a tensor"""
         if not torch.is_tensor(y):
             target_data = y.copy(deep=True)
@@ -301,8 +327,8 @@ class Regressor:
 
             # Print a 10th of the way through epochs
 
-            """if (epoch + 1) % (self.nb_epoch / 10) == 0:
-                print(f'Epoch{epoch + 1}, Loss: {(epoch_error / count) ** 0.5}')"""
+            if (epoch + 1) % (self.nb_epoch / 10) == 0:
+                print(f'Epoch{epoch + 1}, Loss: {(epoch_error / count) ** 0.5}')
 
         return self
 
@@ -356,7 +382,6 @@ def save_regressor(trained_model):
     """
     Utility function to save the trained regressor model in model.pickle.
     """
-    # If you alter this, make sure it works in tandem with load_regressor
     with open('model.pickle', 'wb') as target:
         pickle.dump(trained_model, target)
     print("\nSaved model in model.pickle\n")
@@ -372,7 +397,7 @@ def load_regressor():
     return trained_model
 
 
-def RegressorHyperParameterSearch(x_train, y_train):
+def HyperParameterSearch(x_train, y_train, params):
     # Ensure to add whatever inputs you deem necessary to this function
     """
     Performs a hyper-parameter for fine-tuning the regressor implemented
@@ -386,9 +411,6 @@ def RegressorHyperParameterSearch(x_train, y_train):
 
     """
 
-    params = {'nb_epoch': [500, 750, 1000], 'lr': [1e-2, 1e-3, 1e-4], 'batch_size': [32, 64, 128, 256],
-              'activation': ['relu'], 'layers': [2, 3, 4], 'neurons': [16, 32, 64],
-              'output_activation': ['relu']}
     classifier = GridSearchCV(estimator=Regressor(x_train), cv=5, param_grid=params, verbose=1,
                               scoring=['neg_mean_squared_error', 'r2'], refit='neg_mean_squared_error')
 
@@ -403,9 +425,6 @@ def RegressorHyperParameterSearch(x_train, y_train):
 def example_main():
     output_label = "median_house_value"
 
-    # Use pandas to read CSV data as it contains various object types
-    # Feel free to use another CSV reader tool
-    # But remember that LabTS tests take Pandas DataFrame as inputs
     data = pd.read_csv("housing.csv")
 
     # Splitting input and output
@@ -415,38 +434,25 @@ def example_main():
     X_train, X_test, Y_train, Y_test = train_test_split(
         x_train, y_train, test_size=0.10, random_state=101)
 
-    # Training
+    # Can add more params
+    params = {'nb_epoch': [500, 750, 1000], 'learning_rate': [1e-2, 1e-3, 1e-4], 'batch_size': [32, 64, 128],
+              'activation': ['relu', 'tanh', 'sigmoid'], 'layers': [2, 3, 4], 'neurons': [16, 32, 64],
+              'output_activation': ['relu']}
 
-    regressor = Regressor(X_train, nb_epoch=1000)
+    HyperParameterSearch(X_train, Y_train, params)
+
+    # Training with best params
+    regressor = Regressor(X_train, nb_epoch=100)
     regressor.fit(X_train, Y_train)
     save_regressor(regressor)
 
     # Error
-    error = np.sqrt(regressor.score(X_test, Y_test))
+    error = regressor.score(X_test, Y_test)
     print("\nRegressor error: {}\n".format(error))
-
-    RegressorHyperParameterSearch(x_train, y_train)
     pass
 
 
 if __name__ == "__main__":
     example_main()
 
-    """output_label = "median_house_value"
 
-    data = pd.read_csv("housing.csv")
-
-    # Splitting input and output
-    x_train = data.loc[:, data.columns != output_label]
-    y_train = data.loc[:, [output_label]]
-
-    X_train, X_test, Y_train, Y_test = train_test_split(
-        x_train, y_train, test_size=0.10, random_state=101)
-
-    # Training and outputting the best parameter on all the data
-
-    regressor = Regressor(x_train, nb_epoch=500, lr=1e-3, batch_size=32, activation='relu', layers=4, neurons=64,
-                          output_activation='relu')
-    regressor.fit(x_train, y_train)
-
-    save_regressor(regressor)"""

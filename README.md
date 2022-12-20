@@ -27,7 +27,7 @@ Install dependencies
 ## Usage/Examples
 
 ```python
-from house_value_regression import*
+from house_value_regression import *
 
 # Given training data (X_train, Y_train) and test data (X_test, Y_test)
 
@@ -40,12 +40,12 @@ from house_value_regression import*
 # layers - the number of hidden layers in the neural network
 # neurons - the number of neurons in each hidden layer
 # activation - the activation function for all but the last hidden layer. 
-    #   One of ['relu', 'sigmoid', 'tanh']
+#   One of ['relu', 'sigmoid', 'tanh']
 # output_activation - the activation function for the last hidden layer if desired to be different. 
-    #   One of ['relu', 'sigmoid', 'tanh']
+#   One of ['relu', 'sigmoid', 'tanh']
 
- Regressor(X_train, nb_epoch=500, lr=1e-3, batch_size=32, activation='relu', 
- layers=4, neurons=64,output_activation='relu')
+Regressor(X_train, nb_epoch=500, learning_rate=1e-3, batch_size=32, activation='relu',
+          layers=4, neurons=64, output_activation='relu')
 
 # To fit training data
 regressor1.fit(X_train, Y_train)

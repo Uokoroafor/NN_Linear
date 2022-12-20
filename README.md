@@ -1,13 +1,11 @@
 
-# Introduction to Machine Learning Coursework 2
+# Linear Regression with Neural Networks
 
-This is our code repo for coursework 2 on Neural Networks for the Introduction to Machine Learning Module. This repo is bipartite containing 2 major files:
+Code adapted from coursework on Neural Networks for the Introduction to Machine Learning Module.
 
 ### house_value_regression.py: 
 
-This contains our Regressor object constructed for linear regression on the California Housing data. It was built with PyTorch, Pandas and  Numpy. This pre-processes data, implements our neural network regressor,  and also evaluates the performance of the regressor given set hyperparameters.
-
-
+This contains a Regressor object constructed for linear regression on the California Housing data. It was built with PyTorch, Pandas and  Numpy. This pre-processes data, implements our neural network regressor,  and also evaluates the performance of the regressor given set hyperparameters.
 
 
 ## Run Locally
@@ -15,7 +13,7 @@ This contains our Regressor object constructed for linear regression on the Cali
 Clone the project
 
 ```bash
-  git clone https://gitlab.doc.ic.ac.uk/lab2223_autumn/Neural_Networks_103.git
+  git clone https://github.com/Uokoroafor/NN_Linear.git
   
 ```
 

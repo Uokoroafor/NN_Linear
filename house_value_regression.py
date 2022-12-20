@@ -13,7 +13,8 @@ from torch.utils.data import DataLoader, TensorDataset
 
 class Regressor:
 
-    def __init__(self, x, nb_epoch=500, learning_rate=1e-2, batch_size=32, activation='relu', output_activation='relu', layers=3,
+    def __init__(self, x, nb_epoch=500, learning_rate=1e-2, batch_size=32, activation='relu', output_activation='relu',
+                 layers=3,
                  neurons=32):
         """
         Initialise the model.
@@ -419,7 +420,7 @@ def HyperParameterSearch(x_train, y_train, params):
     print(classifier.best_score_)
     print(classifier.best_estimator_)
     save_regressor(classifier.best_estimator_)
-    return classifier.best_estimator_
+    return classifier.best_params_
 
 
 def example_main():
@@ -439,10 +440,10 @@ def example_main():
               'activation': ['relu', 'tanh', 'sigmoid'], 'layers': [2, 3, 4], 'neurons': [16, 32, 64],
               'output_activation': ['relu']}
 
-    HyperParameterSearch(X_train, Y_train, params)
+    best_params = HyperParameterSearch(X_train, Y_train, params)
 
     # Training with best params
-    regressor = Regressor(X_train, nb_epoch=100)
+    regressor = Regressor(x=X_train, **best_params)
     regressor.fit(X_train, Y_train)
     save_regressor(regressor)
 
@@ -454,5 +455,3 @@ def example_main():
 
 if __name__ == "__main__":
     example_main()
-
-

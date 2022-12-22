@@ -335,7 +335,7 @@ class Regressor:
 
     def predict(self, x):
         """
-        Output the value corresponding to an input x.
+        Outputs the value corresponding to an input x.
 
         Arguments:
             x {pd.DataFrame} -- Raw input array of shape
@@ -352,7 +352,7 @@ class Regressor:
 
     def score(self, x, y):
         """
-        Function to evaluate the model accuracy on a validation dataset.
+        Evaluates the model accuracy on a validation dataset.
 
         Arguments:
             - x {pd.DataFrame} -- Raw input array of shape
@@ -398,13 +398,17 @@ def load_regressor():
     return trained_model
 
 
-def HyperParameterSearch(x_train, y_train, params):
+def HyperParameterSearch(x_train, y_train, params, verbose=1):
     # Ensure to add whatever inputs you deem necessary to this function
     """
     Performs a hyper-parameter for fine-tuning the regressor implemented
     in the Regressor class.
 
-    Arguments: params(dict): Dictionary with a list for each key. Each key is the parameter we want to test  for the
+    Arguments:
+        x_train (pd.DataFrame): input training data
+        y_train (pd.DataFrame): output training data
+        verbose (int): 1,2 or 3 for the level of notification from cvgridsearch
+        params(dict): Dictionary with a list for each key. Each key is the parameter we want to test  for the
     parameters we're looking to test
 
     Returns:
@@ -412,7 +416,7 @@ def HyperParameterSearch(x_train, y_train, params):
 
     """
 
-    classifier = GridSearchCV(estimator=Regressor(x_train), cv=5, param_grid=params, verbose=1,
+    classifier = GridSearchCV(estimator=Regressor(x_train), cv=5, param_grid=params, verbose=verbose,
                               scoring=['neg_mean_squared_error', 'r2'], refit='neg_mean_squared_error')
 
     classifier.fit(x_train, y_train)
